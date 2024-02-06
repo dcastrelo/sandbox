@@ -3,8 +3,10 @@ Set-ExecutionPolicy Bypass -Scope Process -Force; [System.Net.ServicePointManage
 # choco install googlechrome -y
 choco install vscodium -y
 choco install winrar -y
-
+choco install bitvise-ssh-client -y
+choco install bitvise-ssh-server -params '"/InstallLocation=C:\temp"' '"/acceptEULA"' 
 pause
+
 
 # Make sure you run PowerShell as an administrator
 
