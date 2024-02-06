@@ -8,26 +8,15 @@ pause
 
 # Make sure you run PowerShell as an administrator
 
-# Define the share name
-$ShareName = "C"
+# Enable the FTP Server feature
+Enable-WindowsOptionalFeature -Online -FeatureName "IIS-FTPServer" -All
 
-# Define the path of the drive you want to share
-$Path = "C:\"
+# Configure FTP authorization rules to allow all users
+Set-ItemProperty "HKLM:\SOFTWARE\Microsoft\FTP\Server" -Name "AllowAnonymous" -Value "true"
 
-# Define the password
-$Password = ConvertTo-SecureString "idkfa792" -AsPlainText -Force
-
-# Define the username
-$Username = "dario"
-
-# Create the new user account
-New-LocalUser -Name $Username -Password $Password
-
-# Create a new SMB share
-New-SmbShare -Name $ShareName -Path $Path -FullAccess "dario"
-
-# Grant permissions to the share for the new user
-Grant-SmbShareAccess -Name $ShareName -AccountName $Username -AccessRight Full
+# Enable FTP service
+Set-Service -Name FTPsvc -StartupType Automatic
+Start-Service -Name FTPsvc
 
 
 pause
