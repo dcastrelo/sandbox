@@ -6,79 +6,29 @@ choco install winrar -y
 
 pause
 
-# Install the Windows feature for FTP
-Install-WindowsFeature Web-FTP-Server -IncludeAllSubFeature
-Install-WindowsFeature Web-Server -IncludeAllSubFeature  IncludeManagementTools
+# Make sure you run PowerShell as an administrator
 
-# Import the module
-Import-Module WebAdministration
+# Define the share name
+$ShareName = "C"
 
-# Create the FTP site
-$FTPSiteName = 'Default FTP Site'
-$FTPRootDir = 'C:\'
-$FTPPort = 21
-New-WebFtpSite -Name $FTPSiteName -Port $FTPPort -PhysicalPath $FTPRootDir
+# Define the path of the drive you want to share
+$Path = "C:\"
 
-# Create the local Windows group
-$FTPUserGroupName = "FTP Users"
-$ADSI = [ADSI]"WinNT://$env:ComputerName"
-$FTPUserGroup = $ADSI.Create("Group", "$FTPUserGroupName")
-$FTPUserGroup.SetInfo()
-$FTPUserGroup.Description = "Members of this group can connect through FTP"
-$FTPUserGroup.SetInfo()
+# Define the password
+$Password = ConvertTo-SecureString "idkfa792" -AsPlainText -Force
 
-# Create an FTP user
-$FTPUserName = "dario"
-$FTPPassword = 'idkfa792'
-$CreateUserFTPUser = $ADSI.Create("User", "$FTPUserName")
-$CreateUserFTPUser.SetInfo()
-$CreateUserFTPUser.SetPassword("$FTPPassword")
-$CreateUserFTPUser.SetInfo()
+# Define the username
+$Username = "dario"
 
-# Add an FTP user to the group FTP Users
-$UserAccount = New-Object System.Security.Principal.NTAccount("$FTPUserName")
-$SID = $UserAccount.Translate([System.Security.Principal.SecurityIdentifier])
-$Group = [ADSI]"WinNT://$env:ComputerName/$FTPUserGroupName,Group"
-$User = [ADSI]"WinNT://$SID"
-$Group.Add($User.Path)
+# Create the new user account
+New-LocalUser -Name $Username -Password $Password
 
-# Enable basic authentication on the FTP site
-$FTPSitePath = "IIS:\Sites\$FTPSiteName"
-$BasicAuth = 'ftpServer.security.authentication.basicAuthentication.enabled'
-Set-ItemProperty -Path $FTPSitePath -Name $BasicAuth -Value $True
-# Add an authorization read rule for FTP Users.
-$Param = @{
-    Filter   = "/system.ftpServer/security/authorization"
-    Value    = @{
-        accessType  = "Allow"
-        roles       = "$FTPUserGroupName"
-        permissions = 1
-    }
-    PSPath   = 'IIS:\'
-    Location = $FTPSiteName
-}
-Add-WebConfiguration @param
+# Create a new SMB share
+New-SmbShare -Name $ShareName -Path $Path -FullAccess "dario"
 
-$SSLPolicy = @(
-    'ftpServer.security.ssl.controlChannelPolicy',
-    'ftpServer.security.ssl.dataChannelPolicy'
-)
-Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[0] -Value $false
-Set-ItemProperty -Path $FTPSitePath -Name $SSLPolicy[1] -Value $false
+# Grant permissions to the share for the new user
+Grant-SmbShareAccess -Name $ShareName -AccountName $Username -AccessRight Full
 
-$UserAccount = New-Object System.Security.Principal.NTAccount("$FTPUserGroupName")
-$AccessRule = [System.Security.AccessControl.FileSystemAccessRule]::new($UserAccount,
-    'ReadAndExecute',
-    'ContainerInherit,ObjectInherit',
-    'None',
-    'Allow'
-)
-$ACL = Get-Acl -Path $FTPRootDir
-$ACL.SetAccessRule($AccessRule)
-$ACL | Set-Acl -Path $FTPRootDir
-
-# Restart the FTP site for all changes to take effect
-Restart-WebItem "IIS:\Sites\$FTPSiteName" -Verbose
 
 pause
 clear
