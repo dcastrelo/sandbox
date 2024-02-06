@@ -1,3 +1,3 @@
 @echo off
 
-Powershell -noprofile -executionpolicy bypass -file "go.ps1"
+Powershell -noprofile -executionpolicy bypass -file "dale.ps1"
